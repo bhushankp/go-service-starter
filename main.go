@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"time"
 )
 
 type HealthResponse struct {
@@ -14,8 +15,11 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
+	repo := &InMemoryHelathRepository{}
+	service := NewHealthService(repo)
+
 	response := HealthResponse{
-		Status: "healthy",
+		Status: service.Check(),
 	}
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Printf("failed to encode health response: %v", err)
@@ -24,12 +28,18 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/health", healthHandler)
 
-	http.HandleFunc("/health", healthHandler)
+	server := &http.Server{
+		Addr:              ":8080",
+		Handler:           loggingMiddleware(mux),
+		ReadHeaderTimeout: 5 * time.Second,
+	}
 
 	log.Println("server is running on :8080")
 
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+	if err := server.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}
 
