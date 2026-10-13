@@ -31,6 +31,15 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", healthHandler)
 
+	taskRepo := NewInMemoryTaskRepository()
+	taskHandler := NewTaskHandler(taskRepo)
+
+	mux.HandleFunc("POST /tasks", taskHandler.Create)
+	mux.HandleFunc("GET /tasks", taskHandler.List)
+	mux.HandleFunc("GET /tasks/{id}", taskHandler.GetByID)
+	mux.HandleFunc("PUT /tasks/{id}", taskHandler.Update)
+	mux.HandleFunc("DELETE /tasks/{id}", taskHandler.Delete)
+
 	server := &http.Server{
 		Addr:              ":8080",
 		Handler:           loggingMiddleware(mux),
